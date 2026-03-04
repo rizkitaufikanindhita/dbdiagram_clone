@@ -15,7 +15,7 @@ export interface Relationship {
   fromCol: string;
   toTable: string;
   toCol: string;
-  type: string; // '>' | '<' | '-'
+  type: string; // '>' (many-to-one) | '<' (one-to-many) | '-' (one-to-one) | '<>' (many-to-many)
 }
 
 export interface Schema {
@@ -33,44 +33,54 @@ export function parseDBML(text: string): Schema {
     const trimmed = line.trim();
     if (!trimmed) continue;
 
-    // Match "Ref: table.col > table.col"
-    // simplified: Ref: (\w+).(\w+) ([><-]) (\w+).(\w+)
-    const refMatch = trimmed.match(/^Ref:\s*(\w+)\.(\w+)\s*([><-])\s*(\w+)\.(\w+)/i);
+    // --- Match Ref ---
+    // Ref: TableA.col <> | > | < | - TableB.col
+    // Support quoted identifiers: "My Table".col
+    const refMatch = trimmed.match(
+      /^Ref\s*:\s*(?:"([^"]+)"|(\w+))\s*\.\s*(?:"([^"]+)"|(\w+))\s*(<>|>|<|-)\s*(?:"([^"]+)"|(\w+))\s*\.\s*(?:"([^"]+)"|(\w+))/i
+    );
     if (refMatch) {
       refs.push({
-        fromTable: refMatch[1],
-        fromCol: refMatch[2],
-        type: refMatch[3],
-        toTable: refMatch[4],
-        toCol: refMatch[5],
+        fromTable: refMatch[1] || refMatch[2],
+        fromCol: refMatch[3] || refMatch[4],
+        type: refMatch[5],
+        toTable: refMatch[6] || refMatch[7],
+        toCol: refMatch[8] || refMatch[9],
       });
       continue;
     }
 
-    // Match "Table Name {"
-    const tableMatch = trimmed.match(/^Table\s+(\w+)\s*\{?$/i);
+    // --- Match Table ---
+    // Table Name { or Table "Quoted Name" {
+    const tableMatch = trimmed.match(/^Table\s+(?:"([^"]+)"|(\w+))\s*\{?$/i);
     if (tableMatch) {
-      currentTable = { name: tableMatch[1], columns: [] };
+      const tableName = tableMatch[1] || tableMatch[2];
+      currentTable = { name: tableName, columns: [] };
       tables.push(currentTable);
       continue;
     }
 
-    // Match "}"
+    // --- Match closing brace ---
     if (trimmed === "}") {
       currentTable = null;
       continue;
     }
 
-    // Match Column: "id int [pk]" or "id int"
+    // --- Match Column ---
     if (currentTable) {
-      // Basic match: name type [settings]
-      // simplified regex for now
-      const colMatch = trimmed.match(/^(\w+)\s+(\w+)(\s*\[.*\])?/);
+      // Match: name type [settings]
+      // name can be quoted "my col" or simple word
+      // type can be multi-word like varchar(255) or double precision
+      const colMatch = trimmed.match(
+        /^(?:"([^"]+)"|(\w+))\s+([\w]+(?:\([^)]*\))?(?:\s+\w+)*)(\s*\[.*\])?/
+      );
       if (colMatch) {
-        const isPk = colMatch[3]?.includes("pk") || false;
+        const colName = colMatch[1] || colMatch[2];
+        const colType = colMatch[3].trim();
+        const isPk = colMatch[4]?.includes("pk") || false;
         currentTable.columns.push({
-          name: colMatch[1],
-          type: colMatch[2],
+          name: colName,
+          type: colType,
           isPk,
         });
       }

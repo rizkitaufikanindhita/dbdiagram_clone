@@ -1,13 +1,13 @@
 import { create } from "zustand";
 import { parseDBML, Schema } from "@/lib/parser";
-import { Node, Edge, Connection, addEdge, OnNodesChange, OnEdgesChange, OnConnect, applyNodeChanges, applyEdgeChanges, MarkerType } from "reactflow";
+import { Node, Edge, Connection, addEdge, OnNodesChange, OnEdgesChange, OnConnect, applyNodeChanges, applyEdgeChanges } from "reactflow";
 
 interface SchemaState {
   code: string;
   schema: Schema;
   nodes: Node[];
   edges: Edge[];
-  
+
   setCode: (code: string) => void;
   onNodesChange: OnNodesChange;
   onEdgesChange: OnEdgesChange;
@@ -30,7 +30,55 @@ Table Posts {
   created_at timestamp
 }
 
-Ref: Posts.user_id > Users.id`;
+Table Profiles {
+  id integer [pk]
+  user_id integer
+  bio text
+  avatar_url varchar
+}
+
+Table Tags {
+  id integer [pk]
+  name varchar
+}
+
+Ref: Posts.user_id > Users.id
+Ref: Profiles.user_id - Users.id
+Ref: Posts.id <> Tags.id`;
+
+/**
+ * Get edge label based on relationship type
+ */
+function getRelLabel(type: string): string {
+  switch (type) {
+    case "<":
+      return "1 ─ *";
+    case ">":
+      return "* ─ 1";
+    case "-":
+      return "1 ─ 1";
+    case "<>":
+      return "* ─ *";
+    default:
+      return "";
+  }
+}
+
+/**
+ * Get edge color based on relationship type
+ */
+function getRelColor(type: string): string {
+  switch (type) {
+    case ">":
+      return "#3b82f6"; // blue
+    case "-":
+      return "#8b5cf6"; // purple
+    case "<>":
+      return "#f59e0b"; // amber
+    default:
+      return "#64748b"; // slate
+  }
+}
 
 export const useSchemaStore = create<SchemaState>((set, get) => ({
   code: DEFAULT_CODE,
@@ -46,26 +94,48 @@ export const useSchemaStore = create<SchemaState>((set, get) => ({
         const existingNode = state.nodes.find((n) => n.id === table.name);
         return {
           id: table.name,
-          // Use existing position if available, else default
-          position: existingNode?.position || { x: 100 + index * 250, y: 100 },
+          position: existingNode?.position || { x: 100 + index * 280, y: 100 },
           data: { label: table.name, columns: table.columns },
           type: "table",
           style: { border: '1px solid #777', padding: 0, borderRadius: 5, background: '#fff' }
         };
       });
 
-      // Generate edges from refs
-      const newEdges: Edge[] = schema.refs.map((ref, idx) => ({
-        id: `ref-${idx}`,
-        source: ref.fromTable,
-        target: ref.toTable,
-        sourceHandle: `${ref.fromTable}-source`,
-        targetHandle: `${ref.toTable}-target`,
-        type: "default",
-        markerEnd: { type: "arrowclosed" as any }, // Assuming reactflow types allow this string literal or enum
-        style: { strokeWidth: 2 },
-        animated: true,
-      }));
+      // Generate edges from refs with relationship type styling
+      const newEdges: Edge[] = schema.refs.map((ref, idx) => {
+        const color = getRelColor(ref.type);
+        return {
+          id: `ref-${idx}`,
+          source: ref.fromTable,
+          target: ref.toTable,
+          sourceHandle: `${ref.fromTable}-source`,
+          targetHandle: `${ref.toTable}-target`,
+          type: "default",
+          label: getRelLabel(ref.type),
+          labelStyle: {
+            fontSize: 12,
+            fontWeight: 700,
+            fill: color,
+          },
+          labelBgStyle: {
+            fill: "#f8fafc",
+            fillOpacity: 0.9,
+          },
+          labelBgPadding: [6, 4] as [number, number],
+          labelBgBorderRadius: 4,
+          markerEnd: ref.type === "<>"
+            ? { type: "arrowclosed" as any, color }
+            : { type: "arrowclosed" as any, color },
+          markerStart: ref.type === "<>"
+            ? { type: "arrowclosed" as any, color }
+            : undefined,
+          style: {
+            strokeWidth: 2,
+            stroke: color,
+          },
+          animated: ref.type === "<>",
+        };
+      });
 
       return { code, schema, nodes: newNodes, edges: newEdges };
     });
