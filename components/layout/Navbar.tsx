@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Download, Clipboard, Image } from "lucide-react";
+import { Download, Clipboard, Image as ImageIcon } from "lucide-react";
 import { useSchemaStore } from "@/store/schemaStore";
 import { generateSQL } from "@/lib/exporter";
 import { useReactFlow, getRectOfNodes, getTransformForBounds } from "reactflow";
@@ -100,7 +100,7 @@ export function Navbar() {
           onClick={handleExportImage}
           className="flex items-center gap-2 rounded bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700 active:scale-95 transition-all shadow-sm"
         >
-          <Image className="h-4 w-4" />
+          <ImageIcon className="h-4 w-4" />
           Export PNG
         </button>
       </div>
