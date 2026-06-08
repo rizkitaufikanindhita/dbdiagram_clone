@@ -97,7 +97,10 @@ export const useSchemaStore = create<SchemaState>()(
             const existingNode = state.nodes.find((n) => n.id === table.name);
             return {
               id: table.name,
-              position: existingNode?.position || { x: 100 + index * 280, y: 100 },
+              position: existingNode?.position || {
+                x: 100 + (index % 3) * 320,
+                y: 100 + Math.floor(index / 3) * 320,
+              },
               data: { label: table.name, columns: table.columns },
               type: "table",
               style: { border: '1px solid #777', padding: 0, borderRadius: 5, background: '#fff' }

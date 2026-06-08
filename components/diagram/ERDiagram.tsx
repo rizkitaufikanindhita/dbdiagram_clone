@@ -37,6 +37,8 @@ export function ERDiagram() {
         onConnect={onConnect}
         onNodeDragStop={(_, node) => updateNodePosition(node.id, node.position)}
         fitView
+        minZoom={0.05}
+        maxZoom={4}
         panOnDrag={true}
         panOnScroll={false}
         zoomOnScroll={true}
