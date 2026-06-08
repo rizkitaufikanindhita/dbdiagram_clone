@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Download, Clipboard, Image as ImageIcon } from "lucide-react";
+import { Download, Clipboard, Image as ImageIcon, Maximize } from "lucide-react";
 import { useSchemaStore } from "@/store/schemaStore";
 import { generateSQL } from "@/lib/exporter";
 import { useReactFlow, getRectOfNodes, getTransformForBounds } from "reactflow";
@@ -9,7 +9,7 @@ import { toPng } from "html-to-image";
 
 export function Navbar() {
   const schema = useSchemaStore((state) => state.schema);
-  const { getNodes } = useReactFlow();
+  const { getNodes, fitView } = useReactFlow();
 
   const handleExport = () => {
     const sql = generateSQL(schema);
@@ -79,6 +79,15 @@ export function Navbar() {
       </div>
 
       <div className="flex gap-2">
+        <button
+          onClick={() => {
+            fitView({ duration: 400 });
+          }}
+          className="flex items-center gap-2 rounded bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200 active:scale-95 transition-all shadow-sm border border-slate-200"
+        >
+          <Maximize className="h-4 w-4 text-slate-500" />
+          Fit View
+        </button>
         <button
           onClick={() => {
             const code = useSchemaStore.getState().code;

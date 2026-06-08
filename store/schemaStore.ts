@@ -14,6 +14,7 @@ interface SchemaState {
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
   updateNodePosition: (id: string, position: { x: number; y: number }) => void;
+  autoArrangeNodes: () => void;
 }
 
 const DEFAULT_CODE = `Table Users {
@@ -101,7 +102,11 @@ export const useSchemaStore = create<SchemaState>()(
                 x: 100 + (index % 3) * 320,
                 y: 100 + Math.floor(index / 3) * 320,
               },
-              data: { label: table.name, columns: table.columns },
+              data: {
+                label: table.name,
+                columns: table.columns,
+                isCustomPositioned: existingNode?.data?.isCustomPositioned || false,
+              },
               type: "table",
               style: { border: '1px solid #777', padding: 0, borderRadius: 5, background: '#fff' }
             };
@@ -165,14 +170,41 @@ export const useSchemaStore = create<SchemaState>()(
       updateNodePosition: (id, position) => {
         set((state) => ({
           nodes: state.nodes.map((node) =>
-            node.id === id ? { ...node, position } : node
+            node.id === id
+              ? {
+                  ...node,
+                  position,
+                  data: { ...node.data, isCustomPositioned: true },
+                }
+              : node
           ),
         }));
+      },
+      autoArrangeNodes: () => {
+        set((state) => {
+          let autoIndex = 0;
+          return {
+            nodes: state.nodes.map((node) => {
+              if (node.data?.isCustomPositioned) {
+                return node;
+              }
+              const pos = {
+                x: 100 + (autoIndex % 3) * 320,
+                y: 100 + Math.floor(autoIndex / 3) * 320,
+              };
+              autoIndex++;
+              return {
+                ...node,
+                position: pos,
+              };
+            }),
+          };
+        });
       },
     }),
     {
       name: "dbdiagram-schema",
-      partialize: (state) => ({ code: state.code }),
+      partialize: (state) => ({ code: state.code, nodes: state.nodes }),
       onRehydrateStorage: () => {
         return (state) => {
           if (state) {
