@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Download, Clipboard, Image as ImageIcon, Maximize } from "lucide-react";
+import { Download, Clipboard, Image as ImageIcon, Maximize, Upload, FileJson } from "lucide-react";
 import { useSchemaStore } from "@/store/schemaStore";
 import { generateSQL } from "@/lib/exporter";
 import { useReactFlow, getRectOfNodes, getTransformForBounds } from "reactflow";
@@ -16,6 +16,43 @@ export function Navbar() {
     navigator.clipboard.writeText(sql).then(() => {
         alert("SQL copied to clipboard!");
     });
+  };
+
+  const handleExportLayout = () => {
+    const nodes = useSchemaStore.getState().nodes;
+    const positions: Record<string, { x: number; y: number }> = {};
+    nodes.forEach(node => {
+      positions[node.id] = node.position;
+    });
+
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(positions, null, 2));
+    const link = document.createElement("a");
+    link.download = `dbdiagram-layout-${Date.now()}.json`;
+    link.href = dataStr;
+    link.click();
+  };
+
+  const handleImportLayout = () => {
+    const input = document.createElement("input");
+    input.type = "file";
+    input.accept = "application/json";
+    input.onchange = (e) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const positions = JSON.parse(e.target?.result as string);
+          useSchemaStore.getState().importPositions(positions);
+          alert("Layout imported successfully!");
+        } catch (err) {
+          alert("Invalid layout file");
+        }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
   };
 
   const handleExportImage = () => {
@@ -97,6 +134,20 @@ export function Navbar() {
         >
           <Clipboard className="h-4 w-4" />
           Export DBML
+        </button>
+        <button
+          onClick={handleExportLayout}
+          className="flex items-center gap-2 rounded bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200 active:scale-95 transition-all shadow-sm border border-slate-200"
+        >
+          <FileJson className="h-4 w-4 text-slate-500" />
+          Export Layout
+        </button>
+        <button
+          onClick={handleImportLayout}
+          className="flex items-center gap-2 rounded bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-200 active:scale-95 transition-all shadow-sm border border-slate-200"
+        >
+          <Upload className="h-4 w-4 text-slate-500" />
+          Import Layout
         </button>
         <button
           onClick={handleExport}

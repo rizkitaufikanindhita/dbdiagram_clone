@@ -14,6 +14,7 @@ interface SchemaState {
   onEdgesChange: OnEdgesChange;
   onConnect: OnConnect;
   updateNodePosition: (id: string, position: { x: number; y: number }) => void;
+  importPositions: (positions: Record<string, { x: number; y: number }>) => void;
   autoArrangeNodes: () => void;
 }
 
@@ -178,6 +179,20 @@ export const useSchemaStore = create<SchemaState>()(
                 }
               : node
           ),
+        }));
+      },
+      importPositions: (positions) => {
+        set((state) => ({
+          nodes: state.nodes.map((node) => {
+            if (positions[node.id]) {
+              return {
+                ...node,
+                position: positions[node.id],
+                data: { ...node.data, isCustomPositioned: true },
+              };
+            }
+            return node;
+          }),
         }));
       },
       autoArrangeNodes: () => {
